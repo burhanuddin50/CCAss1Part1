@@ -2,18 +2,26 @@
 using namespace std;
 #include<bits/stdc++.h>
 #include<stdio.h>
+#include <cstdlib>
+#include <stdlib.h>
 class DFA
 {
 public:
     int states;
+    int currentstate;
     std::vector<int> finalstates;
     std::vector<std::vector<int>> transition;
 
     DFA()
     {
+        currentstate=0;
         states=0;
         finalstates=vector<int>();
         transition=vector<vector<int>>();
+    }
+    void reset()
+    {
+        currentstate=0;
     }
 };
 void print(DFA* d)
@@ -510,40 +518,111 @@ DFA regextoDFA(string s_infix)
     DFA d=nfatodfa(n);
     return d;
 }
-class DFAstate{
-    public:
-    int state;
-    DFA d;
-    DFAstate(DFA df)
-    {
-        d=df;
-        state=0;
-    }
-};
-bool nextstate(DFAstate ds,char c)
+bool checkstate(DFA ds)
 {
-    if(ds.state!=-1)
-    ds.state=ds.d.transition[ds.state][c-'a'];
-    if(count(ds.d.finalstates.begin(),ds.d.finalstates.end(),ds.state))
+    if(count(ds.finalstates.begin(),ds.finalstates.end(),ds.currentstate))
     return true;
     else
     return false;
 }
+void nextstate(DFA& ds,char c)
+{
+    if(ds.currentstate!=-1)
+    ds.currentstate=ds.transition[ds.currentstate][c-'a'];
+}
+bool iteratetillmatch(int& index,string &in, vector<DFA>&input)
+{
+    int finished=0;
+    int startindex=index;
+    int size=in.size();
+    int dfasize=input.size();
+    vector<int>matched(dfasize,-2);
+    for(int i=0; i<dfasize; i++)
+    input[i].reset();
+    for(int i=0; i<dfasize; i++)
+    {
+        if(checkstate(input[i]))
+        matched[i]=-1;
+    }
+    while(index<size)
+    {
+        for(int i=0; i<dfasize; i++)
+        nextstate(input[i],in[index]);
+        for(int i=0; i<dfasize; i++)
+        {
+            if(input[i].currentstate==-1)
+            finished=finished|(1<<i);
+        }
+        if(finished==((1<<dfasize)-1))
+        break;
+        for(int i=0; i<dfasize; i++)
+        {
+        if(checkstate(input[i]))
+        matched[i]=index;
+        }
+        index++;
+    }  
+    int maxdfa=0;
+    for(int i=0; i<dfasize; i++)
+    {
+        if(matched[i]>matched[maxdfa])
+        maxdfa=i;
+    }
+    if(matched[maxdfa]==-2)
+    cout<<"<"<<in.substr(startindex,index-startindex)<<",0>";
+    else if(matched[maxdfa]==-1)
+    cout<<"<,0>";
+    else
+    {
+    cout<<"<"<<in.substr(startindex,matched[maxdfa]-startindex+1)<<","<<maxdfa+1<<">";
+    index=matched[maxdfa]+1;
+    }
+    if(index!=size)
+        return true;
+    else
+        return false;
+}
 int main()
 {
-    string in="";
-    cout<<"Enter a string to check : ";
-    cin>> in;
-    vector<DFA>input;
-    string s;
-    cout<<"Enter Regex Pattern :";
-    cin>>s;
-    while(s!="exit")
-    {
-    DFA d;
-    input.push_back(d);
-    cout<<"Enter Regex Pattern :";
-    cin>>s;
+    // string in="";
+    // cout<<"Enter a string to check : ";
+    // cin>> in;
+    ifstream inputFile("input.txt");
+    if (!inputFile.is_open()) {
+        cerr << "Unable to open the file.\n";
+        return 0; 
     }
+    string in;
+    getline(inputFile,in);
+    vector<DFA>input;
+    // string s;
+    // cout<<"Enter Regex Pattern :";
+    // cin>>s;
+    // while(s!="exit")
+    // {
+    // DFA d=regextoDFA(s);
+    // print(&d);
+    // input.push_back(d);
+    // cout<<"Enter Regex Pattern :";
+    // cin>>s;
+    // }
+    string s;
+    while(getline(inputFile,s))
+    {
+        DFA d=regextoDFA(s);
+        input.push_back(d);
+    }
+    inputFile.close();
+    ofstream outputFile("output.txt");
+    if (!outputFile.is_open()) {
+        std::cerr << "Unable to open the file.\n";
+        return 1;
+    }
+    streambuf* coutbuf = std::cout.rdbuf();
+    cout.rdbuf(outputFile.rdbuf());
+    int index=0;
+    while(iteratetillmatch(index,in,input));
+    cout.rdbuf(coutbuf);
+    outputFile.close();
     return 0;
-}
+}  
