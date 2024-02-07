@@ -510,23 +510,40 @@ DFA regextoDFA(string s_infix)
     DFA d=nfatodfa(n);
     return d;
 }
+class DFAstate{
+    public:
+    int state;
+    DFA d;
+    DFAstate(DFA df)
+    {
+        d=df;
+        state=0;
+    }
+};
+bool nextstate(DFAstate ds,char c)
+{
+    if(ds.state!=-1)
+    ds.state=ds.d.transition[ds.state][c-'a'];
+    if(count(ds.d.finalstates.begin(),ds.d.finalstates.end(),ds.state))
+    return true;
+    else
+    return false;
+}
 int main()
 {
+    string in="";
+    cout<<"Enter a string to check : ";
+    cin>> in;
+    vector<DFA>input;
     string s;
     cout<<"Enter Regex Pattern :";
     cin>>s;
-    DFA d=regextoDFA(s);
-    string in="";
-    while(true)
+    while(s!="exit")
     {
-        cout<<"Enter a string to check : ";
-        cin>> in;
-        if(in=="exit")
-        return 0;
-        if(check_DFA(d,in))
-        cout<<"YES"<<endl;
-        else
-        cout<<"NO"<<endl;
+    DFA d;
+    input.push_back(d);
+    cout<<"Enter Regex Pattern :";
+    cin>>s;
     }
     return 0;
 }
