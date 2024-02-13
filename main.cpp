@@ -9,8 +9,8 @@ class DFA
 public:
     int states;
     int currentstate;
-    std::vector<int> finalstates;
-    std::vector<std::vector<int>> transition;
+    vector<int> finalstates;
+    vector<vector<int>> transition;
 
     DFA()
     {
@@ -222,8 +222,8 @@ DFA nfatodfa(NFA a)
 class NFAe {
 public:
     int states;
-    std::vector<int> finalstates;
-    std::vector<std::vector<std::vector<int>>> transition;
+    vector<int> finalstates;
+    vector<vector<vector<int>>> transition;
 
     NFAe(int n)
     {
@@ -344,9 +344,12 @@ NFA convNFA(NFAe ne)
             n.transition[i][j].push_back(k); 
         }
     }
-    for(int i:ne.finalstates)
-    for(int j:e_closure[i])
-    n.finalstates.push_back(j);
+    for(int k:ne.finalstates)
+    for(int i=0; i<ne.states; i++)
+    if(count(ne.transition[i][2].begin(),ne.transition[i][2].end(),k))
+    n.finalstates.push_back(i);
+    for(int k:ne.finalstates)
+    n.finalstates.push_back(k);
     return n;
 }
 string infixtopostfix(string s)
@@ -355,7 +358,7 @@ string infixtopostfix(string s)
     string postfix="";
     for(char i:s)
     {
-        if(i=='('|| i=='*'|| i=='|'||i=='.')
+        if(i=='('|| i=='*'|| i=='|'||i=='.' || i=='+' || i=='?')
         st.push(i);
         else if(i=='a')
         postfix+="0";
@@ -370,6 +373,8 @@ string infixtopostfix(string s)
             }
             st.pop();
         }
+        else
+        cout<<"Error in infix to postfix"<<endl;
     }
     while(!st.empty())
     {
@@ -435,12 +440,25 @@ NFAe postfixtoNFAe(string s)
             {
                 NFAe n1=st.top();
                 st.pop();
+                NFAe n2(n1.states+2);
+                for(int j=0; j<n1.states; j++)
+                {
+                    for(int p=0; p<3; p++)
+                    {
+                    for(int k:n1.transition[j][p])
+                    {
+                        n2.transition[j+1][p].push_back(k+1);
+                    }}
+                }
+                n2.transition[0][2].push_back(1);
                 for(int j:n1.finalstates)
                 {
-                    n1.transition[j][2].push_back(0);
-                    n1.transition[0][2].push_back(j);
+                    n2.transition[j+1][2].push_back(n1.states+1);
                 }
-                st.push(n1);
+                n2.transition[n1.states+1][2].push_back(0);
+                n2.transition[0][2].push_back(n1.states+1);
+                n2.finalstates.push_back(n1.states+1);
+                st.push(n2);
             }
             else if(s[i]=='|')
             {
@@ -478,6 +496,52 @@ NFAe postfixtoNFAe(string s)
                 n3.transition[0][2].push_back(n1.states+1);
                 st.push(n3);
             }
+            else if(s[i]=='+')
+            {
+                NFAe n1=st.top();
+                st.pop();
+                NFAe n2(n1.states+2);
+                for(int j=0; j<n1.states; j++)
+                {
+                    for(int p=0; p<3; p++)
+                    {
+                    for(int k:n1.transition[j][p])
+                    {
+                        n2.transition[j+1][p].push_back(k+1);
+                    }}
+                }
+                n2.transition[0][2].push_back(1);
+                for(int j:n1.finalstates)
+                {
+                    n2.transition[j+1][2].push_back(n1.states+1);
+                }
+                n2.transition[n1.states+1][2].push_back(0);
+                n2.finalstates.push_back(n1.states+1);
+                st.push(n2);
+            }
+            else if(s[i]=='?')
+            {
+                NFAe n1=st.top();
+                st.pop();
+                NFAe n2(n1.states+2);
+                for(int j=0; j<n1.states; j++)
+                {
+                    for(int p=0; p<3; p++)
+                    {
+                    for(int k:n1.transition[j][p])
+                    {
+                        n2.transition[j+1][p].push_back(k+1);
+                    }}
+                }
+                n2.transition[0][2].push_back(1);
+                for(int j:n1.finalstates)
+                {
+                    n2.transition[j+1][2].push_back(n1.states+1);
+                }
+                n2.finalstates.push_back(n1.states+1);
+                n2.transition[0][2].push_back(n1.states+1);
+                st.push(n2);
+            }
             else
             {
                 cout<<"Errror";
@@ -505,7 +569,7 @@ string removespace(string s)
 {
     string answer="";
     for(char i:s)
-    if(i!=' ')
+    if(i!=' ' && i!='\n' && i!='\r')
     answer+=i;
     return answer;
 }
@@ -514,7 +578,9 @@ DFA regextoDFA(string s_infix)
     s_infix=adddot(removespace(s_infix));
     string s_postfix=infixtopostfix(s_infix);
     NFAe ne=postfixtoNFAe(s_postfix);
+    print_NFAe(ne);
     NFA n=convNFA(ne);
+    print_NFA(n);
     DFA d=nfatodfa(n);
     return d;
 }
@@ -569,7 +635,10 @@ bool iteratetillmatch(int& index,string &in, vector<DFA>&input)
         maxdfa=i;
     }
     if(matched[maxdfa]==-2)
-    cout<<"<"<<in.substr(startindex,index-startindex)<<",0>";
+    {
+    cout<<"<"<<in.substr(startindex,1)<<",0>";
+    index=startindex+1;
+    }
     else if(matched[maxdfa]==-1)
     cout<<"<,0>";
     else
@@ -594,6 +663,7 @@ int main()
     }
     string in;
     getline(inputFile,in);
+    in=removespace(in);
     vector<DFA>input;
     // string s;
     // cout<<"Enter Regex Pattern :";
@@ -614,15 +684,17 @@ int main()
     }
     inputFile.close();
     ofstream outputFile("output.txt");
-    if (!outputFile.is_open()) {
-        std::cerr << "Unable to open the file.\n";
+    if (!outputFile.is_open()){
+        cerr << "Unable to open the file.\n";
         return 1;
     }
-    streambuf* coutbuf = std::cout.rdbuf();
+    streambuf* coutbuf = cout.rdbuf();
     cout.rdbuf(outputFile.rdbuf());
     int index=0;
     while(iteratetillmatch(index,in,input));
     cout.rdbuf(coutbuf);
     outputFile.close();
+    //DFA d=regextoDFA("(((((a)*)(b))(((a)*)((b)((a)*))))*)");
+    //cout<<check_DFA(d,"aa")<<endl;
     return 0;
-}  
+}
